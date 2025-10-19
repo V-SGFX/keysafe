@@ -1,4 +1,3 @@
-Porozumienia dla AI (Copilot / Agent)
 
 Krótko i na temat — czego oczekujemy od agenta pracującego w repozytorium `keysafe`.
 
@@ -31,10 +30,3 @@ Krótko i na temat — czego oczekujemy od agenta pracującego w repozytorium `k
   - `/workspaces/keysafe/key` — duplikat; sprawdź różnice
   - `/workspaces/keysafe/keystore.json` — przykład danych
   - `README.md` — minimalny opis projektu
-
-- Format commitów i PR:
-  - Krótkie, rzeczowe komunikaty. Przy zmianach API JSON dodaj migrację i aktualizację `keystore.json` przykładu.
-
-Jeśli coś jest niejasne w projekcie (np. który plik traktować jako źródło prawdy: `keystore.py` czy `key`), zapytaj o oczekiwaną wersję; zaproponuj konsolidację i przygotuj patch.
-
-Proszę o feedback: czy chcesz, żebym skonsolidował `key` i `keystore.py` teraz, albo dodał prosty CLI i kilka testów jako następne kroki?
