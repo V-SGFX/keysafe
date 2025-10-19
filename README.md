@@ -61,6 +61,41 @@ Prosty menedżer kluczy RSA w Pythonie.
 - Szyfrowanie prywatnych kluczy (AES-GCM + Argon2id)
 - Zapis w bezpiecznym formacie JSON
 
+## Co potrafi program (krótki opis)
+
+- Tworzy pary kluczy RSA i zapisuje publiczny PEM w jawnej formie.
+- Prywatne klucze są zaszyfrowane symetrycznie przy użyciu AES-256-GCM. Klucz AES jest wyprowadzany z hasła głównego (master password) przy użyciu Argon2id (parametry w kodzie: time=2, memory_kb=65536, parallelism=1).
+- Plik `keystore.json` przechowuje wpisy w formacie JSON; gdy jest zaszyfrowany, zawiera wrapper z polami `encrypted: true`, `enc_params` (salt, nonce, kdf) oraz base64 `ciphertext` całego store.
+- CLI udostępnia polecenia: create, list, export-public, decrypt. Dodana jest także funkcja programowa `rotate_master` do rotacji hasła głównego.
+
+## Backup i przywracanie
+
+1. Backup: po prostu skopiuj zaszyfrowany plik `keystore.json` w bezpieczne miejsce. Ponieważ plik jest zaszyfrowany, backup pliku można traktować jako bezpieczny nośnik kopii zapasowej (o ile hasło główne nie wyciekło).
+
+```bash
+cp keystore.json /path/to/secure/backup/keystore.json.bak
+```
+
+2. Przywracanie: skopiuj backup z powrotem do katalogu projektu i upewnij się, że masz poprawne hasło główne, aby odszyfrować wpisy.
+
+```bash
+cp /path/to/secure/backup/keystore.json.bak keystore.json
+# następnie użyj CLI lub funkcji w Pythonie, np.:
+# make run ARGS="list"  # program zapyta o master password jeśli plik jest zaszyfrowany
+```
+
+3. Rotacja master password (przywrócenie + zmiana hasła):
+
+Jeżeli chcesz zmienić master password po przywróceniu backupu, użyj funkcji `rotate_master` (dostępna programowo) lub skryptowo odszyfruj i zapisz ponownie używając nowego hasła:
+
+```python
+from keystore import load_keystore_encrypted, save_keystore_encrypted
+store = load_keystore_encrypted('keystore.json', 'stare-haslo')
+save_keystore_encrypted('keystore.json', store['entries'], 'nowe-haslo')
+```
+
+Uwaga: zawsze trzymaj backup przed rotacją na wypadek problemów z odzyskaniem.
+
 ## Wymagania
 
 - Python 3.8+
