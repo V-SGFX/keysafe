@@ -1,0 +1,4 @@
+cryptography
+argon2-cffi
+pytest
+Flask
