@@ -1,5 +1,8 @@
 # keysafe
 Projekt WSB DG - Grupa 5 - bezpieczeństwo teleinformatyczne
+- Łukasz Poseł
+- Michał Kocoń
+- Hubert Koń
 
 ## Szybki start (lokalnie)
 
