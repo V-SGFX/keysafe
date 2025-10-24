@@ -6,6 +6,8 @@ import argparse
 import sys
 from datetime import datetime, timezone
 import getpass
+import shutil
+import shutil
 
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization, hashes
@@ -184,6 +186,28 @@ def read_store(path: str, master_password: str | None = None):
     return load_keystore(path)
 
 
+def backup_keystore(path: str, backup_path: str):
+    """Make a filesystem backup (copy) of the keystore file.
+
+    This performs a safe copy preserving metadata where possible.
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(path)
+    shutil.copy2(path, backup_path)
+
+
+def restore_keystore(backup_path: str, path: str):
+    """Restore keystore from backup (atomic replace).
+
+    It writes to a temporary file and then renames to avoid partial writes.
+    """
+    if not os.path.exists(backup_path):
+        raise FileNotFoundError(backup_path)
+    tmp = path + ".tmp"
+    shutil.copy2(backup_path, tmp)
+    os.replace(tmp, path)
+
+
 def rotate_master(path: str, old_master: str, new_master: str):
     """Odszyfruj store przy pomocy old_master i zapisz ponownie zaszyfrowany new_master."""
     if not os.path.exists(path):
@@ -193,6 +217,15 @@ def rotate_master(path: str, old_master: str, new_master: str):
     entries = data.get("entries", [])
     # write using new master
     save_keystore_encrypted(path, entries, new_master)
+
+
+def restore_backup(path: str):
+    """Restore keystore from path + '.bak'. Raises FileNotFoundError if backup missing."""
+    bak = path + '.bak'
+    if not os.path.exists(bak):
+        raise FileNotFoundError(bak)
+    shutil.copy(bak, path)
+    return True
 
 
 
@@ -277,6 +310,8 @@ def _cli():
     c_decrypt.add_argument("id", help="entry id")
     c_decrypt.add_argument("--out", help="output file for private key")
 
+    sub.add_parser("restore-backup", help="Restore keystore from <keystore>.bak")
+
     args = p.parse_args()
 
     if args.cmd == "list":
@@ -337,6 +372,18 @@ def _cli():
             return 0
         print(priv.decode())
         return 0
+
+    if args.cmd == "restore-backup":
+        try:
+            restore_backup(args.keystore)
+            print("Restored keystore from", args.keystore + ".bak")
+            return 0
+        except FileNotFoundError as exc:
+            print("Backup not found:", exc, file=sys.stderr)
+            return 2
+        except Exception as exc:
+            print("Restore failed:", exc, file=sys.stderr)
+            return 1
 
 
 if __name__ == "__main__":

@@ -14,6 +14,15 @@ app.secret_key = os.environ.get("KEYSAFE_SECRET", "dev-secret")
 T_INDEX = """
 <h1>Keysafe</h1>
 <a href="/create">Create</a>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul class="flashes">
+        {% for m in messages %}
+            <li>{{ m }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
 <h2>Entries</h2>
 <ul>
 {% for e in entries %}
@@ -40,6 +49,15 @@ def index():
 
 T_CREATE = """
 <h1>Create entry</h1>
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        <ul class="flashes">
+        {% for m in messages %}
+            <li>{{ m }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
 <form method="post">
 label: <input name="label"><br>
 bits: <input name="bits" value="2048"><br>
@@ -60,7 +78,12 @@ def create():
             return redirect(url_for("create"))
         e = create_entry(label, master, bits=bits)
         # append and save encrypted
-        store = read_store("keystore.json", master) if os.path.exists("keystore.json") else {"entries": []}
+        try:
+            store = read_store("keystore.json", master) if os.path.exists("keystore.json") else {"entries": []}
+        except Exception as exc:
+            # most likely wrong master or corrupted keystore — surface a user-friendly message
+            flash("Failed to read existing keystore: {}".format(str(exc)))
+            return redirect(url_for("create"))
         store.setdefault("entries", []).append(e)
         save_keystore_encrypted("keystore.json", store.get("entries", []), master)
         flash("Created entry " + e["id"])
