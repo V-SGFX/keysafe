@@ -84,6 +84,46 @@ cp /path/to/secure/backup/keystore.json.bak keystore.json
 # make run ARGS="list"  # program zapyta o master password jeśli plik jest zaszyfrowany
 ```
 
+### Zalecane praktyki przy backupie
+
+- Przechowuj backup w bezpiecznym, ograniczonym miejscu (zaszyfrowany dysk, bezpieczne repozytorium, HSM lub bezpieczny serwer plików).
+- Nie przesyłaj backupu przez niezaszyfrowane kanały. Plik zawiera zaszyfrowane dane — jednak bezpieczeństwo opiera się na tajności master password.
+- Regularnie testuj przywracanie backupu na izolowanym środowisku.
+
+### Przykładowy skrypt backup/restore (shell)
+
+Poniżej przykład prostego skryptu bash, który tworzy kopię zapasową i zachowuje kilka wersji:
+
+```bash
+# create backup directory (once)
+mkdir -p /var/backups/keysafe
+
+# timestamped backup
+cp keystore.json /var/backups/keysafe/keystore.json.$(date -u +%Y%m%dT%H%M%SZ)
+
+# optionally keep a .bak symlink to the latest
+ln -sf /var/backups/keysafe/keystore.json.$(date -u +%Y%m%dT%H%M%SZ) /var/backups/keysafe/keystore.json.bak
+```
+
+### Rotacja hasła głównego (master password)
+
+Rotacja polega na odszyfrowaniu całego store przy użyciu starego hasła, a następnie ponownym zaszyfrowaniu z użyciem nowego hasła. Zalecane kroki:
+
+1. Zrób backup obecnego pliku `keystore.json` (zanim dokonasz rotacji).
+2. Uruchom rotację programowo lub ręcznie (przykład poniżej).
+
+```python
+from keystore import load_keystore_encrypted, save_keystore_encrypted
+
+# wczytaj przy użyciu starego hasła
+store = load_keystore_encrypted('keystore.json', 'stare-haslo')
+
+# zapisz ponownie z nowym hasłem
+save_keystore_encrypted('keystore.json', store['entries'], 'nowe-haslo')
+```
+
+Jeżeli coś pójdzie nie tak, przywróć backup i spróbuj ponownie.
+
 3. Rotacja master password (przywrócenie + zmiana hasła):
 
 Jeżeli chcesz zmienić master password po przywróceniu backupu, użyj funkcji `rotate_master` (dostępna programowo) lub skryptowo odszyfruj i zapisz ponownie używając nowego hasła:
