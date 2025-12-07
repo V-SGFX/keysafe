@@ -1,16 +1,136 @@
 {
-  "version": "2.5.0",
   "summary": {
-    "title": "Keysafe",
-    "owner": "V-SGFX ŁukaszP",
-    "description": "",
-    "id": 0
+    "title": "KeySafe – menedżer kluczy RSA",
+    "owner": "Grupa 5 WSB DG – Łukasz Poseł, Michał Kocoń, Hubert Koń",
+    "description": "Prosty lokalny menedżer kluczy RSA z szyfrowaniem kluczy prywatnych AES-256-GCM i wywodzeniem klucza za pomocą Argon2id. Projekt na zaliczenie przedmiotu Bezpieczeństwo Teleinformatyczne."
   },
   "detail": {
     "contributors": [],
-    "diagrams": [],
-    "diagramTop": 0,
-    "reviewer": "",
-    "threatTop": 0
-  }
+    "diagrams": [
+      {
+        "title": "Przegląd systemu KeySafe",
+        "thumbnail": "./public/content/images/thumbnail.jpg",
+        "id": 0,
+        "diagramJson": {
+          "cells": [
+            {
+              "type": "tm.Process",
+              "size": { "width": 140, "height": 80 },
+              "position": { "x": 450, "y": 300 },
+              "angle": 0,
+              "id": "process-cli",
+              "name": "KeySafe CLI / GUI (Flask)",
+              "description": "Aplikacja Python (cryptography + argon2-cffi)",
+              "outOfScope": false,
+              "reasonOutOfScope": "",
+              "hasOpenThreats": false,
+              "threats": [
+                {
+                  "status": "Open",
+                  "title": "Wyciek master password z pamięci procesu",
+                  "type": "Elevation of privilege",
+                  "severity": "High",
+                  "description": "Podczas działania aplikacji master password znajduje się w pamięci w postaci plaintext. Atakujący z dostępem do pamięci procesu (np. root/admin) może go odczytać.",
+                  "mitigation": "Używanie biblioteki cryptography.hazmat.primitives.kdf.scrypt/Argon2 z wipe pamięci po użyciu (w obecnej wersji nie zaimplementowane). Uruchamianie z minimalnymi uprawnieniami."
+                },
+                {
+                  "status": "Open",
+                  "title": "Atak słownikowy/brute-force na master password",
+                  "type": "Elevation of privilege",
+                  "severity": "Medium",
+                  "description": "Argon2id jest używany, ale parametry są dość niskie (time=2, memory=64 MiB, parallelism=1). Słabe hasło nadal podatne na atak offline.",
+                  "mitigation": "Zalecić użytkownikom bardzo silne hasła (min. 20+ znaków, losowe). Zwiększyć parametry Argon2 w przyszłości."
+                }
+              ]
+            },
+            {
+              "type": "tm.DataStore",
+              "size": { "width": 200, "height": 100 },
+              "position": { "x": 420, "y": 500 },
+              "angle": 0,
+              "id": "datastore-keystore",
+              "name": "keystore.json",
+              "description": "Zaszyfrowany plik JSON (AES-256-GCM + Argon2id). Zawiera salt, nonce, tag i ciphertext.",
+              "isEncrypted": true,
+              "outOfScope": false,
+              "threats": [
+                {
+                  "status": "Open",
+                  "title": "Utrata pliku = utrata dostępu do wszystkich kluczy",
+                  "type": "Information disclosure",
+                  "severity": "High",
+                  "description": "Brak mechanizmu odzyskiwania (recovery key, shamir secret sharing itp.). Usunięcie/uszkodzenie pliku = permanentna utrata kluczy.",
+                  "mitigation": "Regularne backupy + testowanie przywracania (dokumentacja już to zaleca)."
+                },
+                {
+                  "status": "Open",
+                  "title": "Atak offline na zaszyfrowany plik",
+                  "type": "Elevation of privilege",
+                  "severity": "Medium",
+                  "description": "Jeśli atakujący zdobędzie keystore.json, może próbować brute-force/dictionary attack na master password.",
+                  "mitigation": "Silne, unikalne hasło główne + aktualne parametry Argon2."
+                }
+              ]
+            },
+            {
+              "type": "tm.Actor",
+              "size": { "width": 120, "height": 120 },
+              "position": { "x": 150, "y": 300 },
+              "angle": 0,
+              "id": "actor-user",
+              "name": "Użytkownik",
+              "description": "Osoba uruchamiająca KeySafe lokalnie",
+              "outOfScope": false,
+              "threats": []
+            },
+            {
+              "type": "tm.Flow",
+              "source": "actor-user",
+              "target": "process-cli",
+              "name": "Wprowadzanie master password i poleceń",
+              "isEncrypted": false,
+              "isPublicNetwork": false,
+              "threats": [
+                {
+                  "status": "Open",
+                  "title": "Keylogger / shoulder surfing",
+                  "type": "Information disclosure",
+                  "severity": "High",
+                  "description": "Master password wprowadzany w plaintext w terminalu/GUI.",
+                  "mitigation": "Używanie bezpiecznego środowiska, unikanie GUI w wersji demo."
+                }
+              ]
+            },
+            {
+              "type": "tm.Flow",
+              "source": "process-cli",
+              "target": "datastore-keystore",
+              "name": "Odczyt/zapis zaszyfrowanego keystore.json",
+              "isEncrypted": false,
+              "threats": [
+                {
+                  "status": "Open",
+                  "title": "Brak weryfikacji integralności pliku",
+                  "type": "Tampering",
+                  "severity": "Medium",
+                  "description": "Plik nie ma dodatkowego HMAC poza tagiem GCM. Teoretycznie możliwa modyfikacja ciphertextu prowadząca do błędów przy deszyfrowaniu (ale nie do RCE).",
+                  "mitigation": "Tag GCM już zapewnia integralność. Dodatkowy HMAC nie jest konieczny."
+                }
+              ]
+            },
+            {
+              "type": "tm.Boundary",
+              "position": { "x": 350, "y": 200 },
+              "size": { "width": 450, "height": 500 },
+              "id": "trust-boundary",
+              "name": "Lokalny komputer użytkownika"
+            }
+          ]
+        },
+        "size": { "height": 800, "width": 1200 }
+      }
+    ]
+  },
+  "version": "2.0",
+  "threatModelSchema": "1.0"
 }
